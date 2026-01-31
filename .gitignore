@@ -1,15 +1,32 @@
+# Gradle files
+.gradle/
+build/
+
+# IntelliJ IDEA files
+.idea/
 *.iml
-.gradle
+*.iws
+*.ipr
+out/
+
+# Android Studio files
+captures/
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
 .externalNativeBuild
-.cxx
+.cxx/
+*.apk
+*.aar
+*.ap_
+
+# Local configuration
 local.properties
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Preview files
+# preview.html  # We might want to keep this for the user if they requested it
+
+# Log files
+*.log
