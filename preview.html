@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista Previa - Reloj Galáctico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0F0C29;
+            --accent-blue: #00D2FF;
+            --accent-purple: #9D50BB;
+            --text-white: #FFFFFF;
+            --text-gray: #AAAAAA;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-white);
+        }
+
+        .watch-container {
+            width: 320px;
+            height: 320px;
+            background-color: var(--bg-color);
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #333;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-image: url('wear/src/main/res/drawable/watch_background.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .ambient-glow {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 210, 255, 0.15) 0%, transparent 70%);
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        .progress-rings {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            pointer-events: none;
+        }
+
+        .ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+
+        .outer-ring {
+            width: 240px;
+            height: 240px;
+            border: 4px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .outer-progress {
+            width: 240px;
+            height: 240px;
+            border: 4px solid transparent;
+            border-top-color: var(--accent-blue);
+            border-right-color: var(--accent-purple);
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .inner-ring {
+            width: 220px;
+            height: 220px;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .inner-progress {
+            width: 220px;
+            height: 220px;
+            border: 2px solid transparent;
+            border-top-color: rgba(0, 210, 255, 0.6);
+            transform: translate(-50%, -50%) rotate(-30deg);
+        }
+
+        .content {
+            z-index: 10;
+            text-align: center;
+        }
+
+        .date {
+            font-size: 10px;
+            font-weight: 300;
+            color: var(--text-gray);
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .time-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+        }
+
+        .time {
+            font-size: 58px;
+            font-weight: 700;
+            color: var(--text-white);
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+        }
+
+        .seconds {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--accent-blue);
+            margin-left: 4px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 50px;
+        }
+
+        .stat-value {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 6px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .steps .stat-value { color: var(--accent-blue); }
+        .bpm .stat-value { color: #FF2D55; }
+
+    </style>
+</head>
+<body>
+    <div class="watch-container">
+        <div class="ambient-glow"></div>
+        
+        <div class="progress-rings">
+            <div class="ring outer-ring"></div>
+            <div class="ring outer-progress"></div>
+            <div class="ring inner-ring"></div>
+            <div class="ring inner-progress"></div>
+        </div>
+
+        <div class="content">
+            <div class="date" id="date">SÁB, ENE 31</div>
+            <div class="time-row">
+                <div class="time" id="time">18:02</div>
+                <div class="seconds" id="seconds">26</div>
+            </div>
+            <div class="stats">
+                <div class="stat-item steps">
+                    <span class="stat-value">8.2k</span>
+                    <span class="stat-label">STEPS</span>
+                </div>
+                <div class="stat-item bpm">
+                    <span class="stat-value">85</span>
+                    <span class="stat-label">BPM</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('time').textContent = `${hours}:${minutes}`;
+            document.getElementById('seconds').textContent = seconds;
+
+            const options = { weekday: 'short', month: 'short', day: 'numeric' };
+            document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options).toUpperCase();
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>
