@@ -16,11 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.MaterialTheme
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
 import androidx.wear.compose.material.TimeTextDefaults
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.geometry.Offset
 import androidx.wear.tooling.preview.devices.WearDevices
 import com.example.reloj.R
 import com.example.reloj.presentation.theme.RelojTheme

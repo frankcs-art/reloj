@@ -19,7 +19,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class ClockWidget : GlanceAppWidget() {
-    override suspend fun provideContent(context: Context, id: GlanceId) {
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val time = LocalTime.now()
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
