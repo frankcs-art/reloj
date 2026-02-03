@@ -212,11 +212,110 @@
         .steps .stat-value { color: var(--accent-blue); }
         .bpm .stat-value { color: #FF2D55; }
 
+        /* Configuration Panel */
+        .config-panel {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            width: 280px;
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid var(--accent-blue);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .config-panel h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--accent-blue);
+        }
+
+        .config-group {
+            margin-bottom: 12px;
+        }
+
+        .config-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: var(--text-gray);
+        }
+
+        .config-group input[type="color"] {
+            width: 100%;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .config-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .config-group select {
+            width: 100%;
+            padding: 5px;
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+
+        .json-output {
+            margin-top: 15px;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 10px;
+            white-space: pre-wrap;
+            color: #00FF00;
+        }
+
     </style>
 </head>
 <body>
-    <div class="watch-container">
-        <div class="ambient-glow"></div>
+    <div class="config-panel">
+        <h2>Configuración</h2>
+        <div class="config-group">
+            <label>Color de Fondo</label>
+            <input type="color" id="cfg-bg" value="#0F0C29">
+        </div>
+        <div class="config-group">
+            <label>Color Acento 1</label>
+            <input type="color" id="cfg-accent1" value="#00D2FF">
+        </div>
+        <div class="config-group">
+            <label>Color Acento 2</label>
+            <input type="color" id="cfg-accent2" value="#00b875">
+        </div>
+        <div class="config-group">
+            <label>
+                <input type="checkbox" id="cfg-steps" checked> Mostrar Pasos
+            </label>
+        </div>
+        <div class="config-group">
+            <label>
+                <input type="checkbox" id="cfg-bpm" checked> Mostrar BPM
+            </label>
+        </div>
+        <div class="config-group">
+            <label>Formato de Hora</label>
+            <select id="cfg-format">
+                <option value="24h">24 Horas</option>
+                <option value="12h">12 Horas</option>
+            </select>
+        </div>
+        <div class="json-output" id="json-out"></div>
+    </div>
+
+    <div class="watch-container" id="watch">
+        <div class="ambient-glow" id="glow"></div>
         
         <div class="progress-rings">
             <div class="ring outer-ring"></div>
@@ -256,21 +355,70 @@
     </div>
 
     <script>
+        const config = {
+            bgColor: "#0F0C29",
+            accentColor1: "#00D2FF",
+            accentColor2: "#00b875",
+            showSteps: true,
+            showBPM: true,
+            is24h: true
+        };
+
+        function updateUI() {
+            const watch = document.getElementById('watch');
+            const glow = document.getElementById('glow');
+            const outerProgress = document.querySelector('.outer-progress');
+            const innerProgress = document.querySelector('.inner-progress');
+            const stepsStat = document.querySelector('.steps');
+            const bpmStat = document.querySelector('.bpm');
+            const jsonOut = document.getElementById('json-out');
+
+            watch.style.backgroundColor = config.bgColor;
+            glow.style.background = `radial-gradient(circle at center, ${config.accentColor1}44 0%, transparent 70%)`;
+
+            outerProgress.style.borderTopColor = config.accentColor1;
+            innerProgress.style.borderTopColor = config.accentColor1 + '99';
+
+            stepsStat.style.display = config.showSteps ? 'flex' : 'none';
+            stepsStat.querySelector('.stat-value').style.color = config.accentColor1;
+
+            bpmStat.style.display = config.showBPM ? 'flex' : 'none';
+
+            document.documentElement.style.setProperty('--accent-blue', config.accentColor1);
+            document.documentElement.style.setProperty('--accent-purple', config.accentColor2);
+
+            jsonOut.textContent = JSON.stringify(config, null, 2);
+        }
+
         function updateTime() {
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
+            let hours = now.getHours();
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
             
-            document.getElementById('time').textContent = `${hours}:${minutes}`;
+            if (!config.is24h) {
+                hours = hours % 12 || 12;
+            }
+            const hoursStr = String(hours).padStart(2, '0');
+
+            document.getElementById('time').textContent = `${hoursStr}:${minutes}`;
             document.getElementById('seconds').textContent = seconds;
 
             const options = { weekday: 'short', month: 'short', day: 'numeric' };
             document.getElementById('date').textContent = now.toLocaleDateString('es-ES', options).toUpperCase();
         }
 
+        // Event Listeners
+        document.getElementById('cfg-bg').addEventListener('input', (e) => { config.bgColor = e.target.value; updateUI(); });
+        document.getElementById('cfg-accent1').addEventListener('input', (e) => { config.accentColor1 = e.target.value; updateUI(); });
+        document.getElementById('cfg-accent2').addEventListener('input', (e) => { config.accentColor2 = e.target.value; updateUI(); });
+        document.getElementById('cfg-steps').addEventListener('change', (e) => { config.showSteps = e.target.checked; updateUI(); });
+        document.getElementById('cfg-bpm').addEventListener('change', (e) => { config.showBPM = e.target.checked; updateUI(); });
+        document.getElementById('cfg-format').addEventListener('change', (e) => { config.is24h = e.target.value === '24h'; updateUI(); });
+
         setInterval(updateTime, 1000);
         updateTime();
+        updateUI();
     </script>
 </body>
 </html>
