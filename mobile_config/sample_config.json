@@ -1,0 +1,9 @@
+{
+  "bgColor": "#0F0C29",
+  "accentColor1": "#00D2FF",
+  "accentColor2": "#9D50BB",
+  "textColor": "#FFFFFF",
+  "showSteps": true,
+  "showBPM": true,
+  "is24h": true
+}
