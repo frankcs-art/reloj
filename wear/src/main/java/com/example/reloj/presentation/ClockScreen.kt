@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.*
@@ -41,9 +42,21 @@ fun ClockScreen() {
         }
     }
 
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val secondsFormatter = DateTimeFormatter.ofPattern("ss")
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+    // Bolt: Memoize formatters to avoid recreation on every-second recomposition
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
+    val secondsFormatter = remember { DateTimeFormatter.ofPattern("ss") }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()) }
+
+    // Bolt: Use derivedStateOf to avoid redundant string formatting on every-second recomposition
+    val formattedDate by remember {
+        derivedStateOf { currentTime.format(dateFormatter).uppercase() }
+    }
+    val formattedTime by remember {
+        derivedStateOf { currentTime.format(timeFormatter) }
+    }
+    val formattedSeconds by remember {
+        derivedStateOf { currentTime.format(secondsFormatter) }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -67,7 +80,7 @@ fun ClockScreen() {
         ) {
             // Date
             Text(
-                text = currentTime.format(dateFormatter).uppercase(),
+                text = formattedDate,
                 style = MaterialTheme.typography.caption2.copy(
                     color = Color(0xFFAAAAAA),
                     letterSpacing = 2.sp,
@@ -81,16 +94,20 @@ fun ClockScreen() {
             Row(
                 verticalAlignment = Alignment.Bottom
             ) {
+                // Bolt: Memoize shadow to avoid object allocation on every recomposition
+                val timeShadow = remember {
+                    Shadow(
+                        color = Color(0xFF00D2FF).copy(alpha = 0.5f),
+                        blurRadius = 20f
+                    )
+                }
                 Text(
-                    text = currentTime.format(timeFormatter),
+                    text = formattedTime,
                     style = MaterialTheme.typography.display1.copy(
                         fontSize = 54.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
-                        shadow = Shadow(
-                            color = Color(0xFF00D2FF).copy(alpha = 0.5f),
-                            blurRadius = 20f
-                        )
+                        shadow = timeShadow
                     )
                 )
                 
@@ -98,7 +115,7 @@ fun ClockScreen() {
                 
                 // Seconds
                 Text(
-                    text = currentTime.format(secondsFormatter),
+                    text = formattedSeconds,
                     modifier = Modifier.padding(bottom = 12.dp),
                     style = MaterialTheme.typography.caption1.copy(
                         color = Color(0xFF00D2FF),
@@ -156,6 +173,14 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
+    // Bolt: Memoize brush to avoid allocation on every draw call
+    val sweepGradient = remember {
+        Brush.sweepGradient(
+            0.0f to Color(0xFF00D2FF),
+            0.5f to Color(0xFF9D50BB),
+            1.0f to Color(0xFF00D2FF)
+        )
+    }
     Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
         val strokeWidth = 8f
         val innerPadding = 12f
@@ -169,11 +194,7 @@ fun ClockProgressRings() {
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
         drawArc(
-            brush = Brush.sweepGradient(
-                0.0f to Color(0xFF00D2FF),
-                0.5f to Color(0xFF9D50BB),
-                1.0f to Color(0xFF00D2FF)
-            ),
+            brush = sweepGradient,
             startAngle = -90f,
             sweepAngle = 280f,
             useCenter = false,
@@ -210,11 +231,13 @@ fun ClockProgressRings() {
 
 @Composable
 fun StatItem(label: String, subLabel: String, color: Color) {
+    // Bolt: Memoize shape to avoid allocation on every recomposition
+    val backgroundShape = remember { androidx.compose.foundation.shape.RoundedCornerShape(8.dp) }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.background(
             color = Color.White.copy(alpha = 0.05f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            shape = backgroundShape
         ).padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
