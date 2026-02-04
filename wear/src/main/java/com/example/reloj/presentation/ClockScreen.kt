@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,8 +81,16 @@ fun ClockScreen() {
             Spacer(modifier = Modifier.height(4.dp))
 
             // Main Time
+            val timeDescription = stringResource(
+                R.string.time_description,
+                currentTime.format(timeFormatter),
+                currentTime.format(secondsFormatter)
+            )
             Row(
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    contentDescription = timeDescription
+                }
             ) {
                 Text(
                     text = currentTime.format(timeFormatter),
@@ -156,7 +167,15 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
-    Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
+    val progressDescription = stringResource(R.string.progress_rings_description)
+    Canvas(
+        modifier = Modifier
+            .size(200.dp)
+            .padding(10.dp)
+            .semantics {
+                contentDescription = progressDescription
+            }
+    ) {
         val strokeWidth = 8f
         val innerPadding = 12f
         
@@ -212,10 +231,15 @@ fun ClockProgressRings() {
 fun StatItem(label: String, subLabel: String, color: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.background(
-            color = Color.White.copy(alpha = 0.05f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-        ).padding(horizontal = 8.dp, vertical = 4.dp)
+        modifier = Modifier
+            .background(
+                color = Color.White.copy(alpha = 0.05f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$label $subLabel"
+            }
     ) {
         Text(
             text = label,
@@ -229,7 +253,7 @@ fun StatItem(label: String, subLabel: String, color: Color) {
             text = subLabel,
             style = MaterialTheme.typography.caption2.copy(
                 color = Color.White.copy(alpha = 0.4f),
-                fontSize = 7.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
