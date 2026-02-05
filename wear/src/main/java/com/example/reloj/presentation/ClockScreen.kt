@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +32,11 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SecondsFormatter = DateTimeFormatter.ofPattern("ss")
+private val DateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+private val FullTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+
 @Composable
 fun ClockScreen() {
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
@@ -41,9 +49,15 @@ fun ClockScreen() {
         }
     }
 
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val secondsFormatter = DateTimeFormatter.ofPattern("ss")
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+    val timeText by remember {
+        derivedStateOf { currentTime.format(TimeFormatter) }
+    }
+    val secondsText by remember {
+        derivedStateOf { currentTime.format(SecondsFormatter) }
+    }
+    val dateText by remember {
+        derivedStateOf { currentTime.format(DateFormatter).uppercase() }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -59,7 +73,11 @@ fun ClockScreen() {
         AmbientGlow()
 
         // Circular progress indicators (simulating steps/battery)
-        ClockProgressRings()
+        val stepsDesc = stringResource(R.string.steps_description)
+        val batteryDesc = stringResource(R.string.battery_description)
+        ClockProgressRings(modifier = Modifier.semantics {
+            contentDescription = "$stepsDesc, $batteryDesc"
+        })
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,7 +85,7 @@ fun ClockScreen() {
         ) {
             // Date
             Text(
-                text = currentTime.format(dateFormatter).uppercase(),
+                text = dateText,
                 style = MaterialTheme.typography.caption2.copy(
                     color = Color(0xFFAAAAAA),
                     letterSpacing = 2.sp,
@@ -78,11 +96,15 @@ fun ClockScreen() {
             Spacer(modifier = Modifier.height(4.dp))
 
             // Main Time
+            val timeA11yLabel = stringResource(R.string.watch_face_time_description, currentTime.format(FullTimeFormatter))
             Row(
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    contentDescription = timeA11yLabel
+                }
             ) {
                 Text(
-                    text = currentTime.format(timeFormatter),
+                    text = timeText,
                     style = MaterialTheme.typography.display1.copy(
                         fontSize = 54.sp,
                         fontWeight = FontWeight.Bold,
@@ -98,7 +120,7 @@ fun ClockScreen() {
                 
                 // Seconds
                 Text(
-                    text = currentTime.format(secondsFormatter),
+                    text = secondsText,
                     modifier = Modifier.padding(bottom = 12.dp),
                     style = MaterialTheme.typography.caption1.copy(
                         color = Color(0xFF00D2FF),
@@ -155,8 +177,8 @@ fun AmbientGlow() {
 }
 
 @Composable
-fun ClockProgressRings() {
-    Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
+fun ClockProgressRings(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(200.dp).padding(10.dp)) {
         val strokeWidth = 8f
         val innerPadding = 12f
         
@@ -229,7 +251,7 @@ fun StatItem(label: String, subLabel: String, color: Color) {
             text = subLabel,
             style = MaterialTheme.typography.caption2.copy(
                 color = Color.White.copy(alpha = 0.4f),
-                fontSize = 7.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
