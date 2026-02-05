@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +30,12 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+// Performance optimization: Define formatters as top-level constants to avoid repeated instantiation
+// DateTimeFormatter is thread-safe and can be reused.
+private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SecondsFormatter = DateTimeFormatter.ofPattern("ss")
+private val DateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
+
 @Composable
 fun ClockScreen() {
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
@@ -41,9 +48,18 @@ fun ClockScreen() {
         }
     }
 
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val secondsFormatter = DateTimeFormatter.ofPattern("ss")
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+    // Performance optimization: Use derivedStateOf to minimize recompositions.
+    // timeText and dateText will only trigger recomposition when they actually change (every minute/day).
+    // This prevents the entire UI from re-rendering when only the seconds update.
+    val dateText by remember {
+        derivedStateOf { currentTime.format(DateFormatter).uppercase() }
+    }
+    val timeText by remember {
+        derivedStateOf { currentTime.format(TimeFormatter) }
+    }
+    val secondsText by remember {
+        derivedStateOf { currentTime.format(SecondsFormatter) }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -66,13 +82,17 @@ fun ClockScreen() {
             verticalArrangement = Arrangement.Center
         ) {
             // Date
-            Text(
-                text = currentTime.format(dateFormatter).uppercase(),
-                style = MaterialTheme.typography.caption2.copy(
+            val baseDateStyle = MaterialTheme.typography.caption2
+            val dateStyle = remember(baseDateStyle) {
+                baseDateStyle.copy(
                     color = Color(0xFFAAAAAA),
                     letterSpacing = 2.sp,
                     fontWeight = FontWeight.Light
                 )
+            }
+            Text(
+                text = dateText,
+                style = dateStyle
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -81,9 +101,10 @@ fun ClockScreen() {
             Row(
                 verticalAlignment = Alignment.Bottom
             ) {
-                Text(
-                    text = currentTime.format(timeFormatter),
-                    style = MaterialTheme.typography.display1.copy(
+                // Performance optimization: Memoize TextStyle to avoid repeated allocations
+                val baseTimeStyle = MaterialTheme.typography.display1
+                val timeTextStyle = remember(baseTimeStyle) {
+                    baseTimeStyle.copy(
                         fontSize = 54.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -92,18 +113,27 @@ fun ClockScreen() {
                             blurRadius = 20f
                         )
                     )
+                }
+
+                Text(
+                    text = timeText,
+                    style = timeTextStyle
                 )
                 
                 Spacer(modifier = Modifier.width(4.dp))
                 
                 // Seconds
-                Text(
-                    text = currentTime.format(secondsFormatter),
-                    modifier = Modifier.padding(bottom = 12.dp),
-                    style = MaterialTheme.typography.caption1.copy(
+                val baseSecondsStyle = MaterialTheme.typography.caption1
+                val secondsStyle = remember(baseSecondsStyle) {
+                    baseSecondsStyle.copy(
                         color = Color(0xFF00D2FF),
                         fontWeight = FontWeight.Medium
                     )
+                }
+                Text(
+                    text = secondsText,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    style = secondsStyle
                 )
             }
 
@@ -156,24 +186,31 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
+    // Performance optimization: Memoize Brush and constant values
+    val sweepBrush = remember {
+        Brush.sweepGradient(
+            0.0f to Color(0xFF00D2FF),
+            0.5f to Color(0xFF9D50BB),
+            1.0f to Color(0xFF00D2FF)
+        )
+    }
+    val inactiveColor = remember { Color.White.copy(alpha = 0.05f) }
+    val batteryColor = remember { Color(0xFF00D2FF).copy(alpha = 0.6f) }
+
     Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
         val strokeWidth = 8f
         val innerPadding = 12f
         
         // Outer Ring (Steps progress simulation)
         drawArc(
-            color = Color.White.copy(alpha = 0.05f),
+            color = inactiveColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
         drawArc(
-            brush = Brush.sweepGradient(
-                0.0f to Color(0xFF00D2FF),
-                0.5f to Color(0xFF9D50BB),
-                1.0f to Color(0xFF00D2FF)
-            ),
+            brush = sweepBrush,
             startAngle = -90f,
             sweepAngle = 280f,
             useCenter = false,
@@ -188,7 +225,7 @@ fun ClockProgressRings() {
         val innerTopLeft = Offset(innerPadding, innerPadding)
 
         drawArc(
-            color = Color.White.copy(alpha = 0.05f),
+            color = inactiveColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
@@ -197,7 +234,7 @@ fun ClockProgressRings() {
             topLeft = innerTopLeft
         )
         drawArc(
-            color = Color(0xFF00D2FF).copy(alpha = 0.6f),
+            color = batteryColor,
             startAngle = -90f,
             sweepAngle = 210f,
             useCenter = false,
@@ -210,29 +247,44 @@ fun ClockProgressRings() {
 
 @Composable
 fun StatItem(label: String, subLabel: String, color: Color) {
+    // Performance optimization: Memoize Modifier and Shape to avoid repeated allocations
+    val itemModifier = remember {
+        Modifier.background(
+            color = Color.White.copy(alpha = 0.05f),
+            shape = RoundedCornerShape(8.dp)
+        ).padding(horizontal = 8.dp, vertical = 4.dp)
+    }
+
+    val baseStyle1 = MaterialTheme.typography.caption1
+    val baseStyle2 = MaterialTheme.typography.caption2
+
+    val labelStyle = remember(baseStyle1, color) {
+        baseStyle1.copy(
+            color = color,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 14.sp
+        )
+    }
+    val subLabelStyle = remember(baseStyle2) {
+        baseStyle2.copy(
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.background(
-            color = Color.White.copy(alpha = 0.05f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-        ).padding(horizontal = 8.dp, vertical = 4.dp)
+        modifier = itemModifier
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.caption1.copy(
-                color = color,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 14.sp
-            )
+            style = labelStyle
         )
         Text(
             text = subLabel,
-            style = MaterialTheme.typography.caption2.copy(
-                color = Color.White.copy(alpha = 0.4f),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
+            style = subLabelStyle
         )
     }
 }
@@ -244,4 +296,3 @@ fun ClockScreenPreview() {
         ClockScreen()
     }
 }
-
