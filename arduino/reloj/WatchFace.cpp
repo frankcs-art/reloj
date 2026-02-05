@@ -1,4 +1,5 @@
 #include "WatchFace.h"
+#include <ctype.h>
 
 WatchFace::WatchFace() : tft(TFT_eSPI()) {
     // Default configuration (Galaxy Theme)
@@ -19,6 +20,7 @@ void WatchFace::init() {
 
 void WatchFace::updateConfig(String json) {
     StaticJsonDocument<512> doc;
+    // Security: Validating BLE input data length before processing
     DeserializationError error = deserializeJson(doc, json);
 
     if (error) {
@@ -27,9 +29,10 @@ void WatchFace::updateConfig(String json) {
         return;
     }
 
-    if (doc.containsKey("bgColor")) config.bgColor = hexTo565(doc["bgColor"]);
-    if (doc.containsKey("accentColor1")) config.accentColor1 = hexTo565(doc["accentColor1"]);
-    if (doc.containsKey("accentColor2")) config.accentColor2 = hexTo565(doc["accentColor2"]);
+    // Security: Validating presence and type of data before processing
+    if (doc.containsKey("bgColor") && doc["bgColor"].is<const char*>()) config.bgColor = hexTo565(doc["bgColor"]);
+    if (doc.containsKey("accentColor1") && doc["accentColor1"].is<const char*>()) config.accentColor1 = hexTo565(doc["accentColor1"]);
+    if (doc.containsKey("accentColor2") && doc["accentColor2"].is<const char*>()) config.accentColor2 = hexTo565(doc["accentColor2"]);
     if (doc.containsKey("showSteps")) config.showSteps = doc["showSteps"];
     if (doc.containsKey("showBPM")) config.showBPM = doc["showBPM"];
     if (doc.containsKey("is24h")) config.is24h = doc["is24h"];
@@ -103,12 +106,13 @@ void WatchFace::drawTime() {
 
     // Draw Main Time
     char timeBuf[10];
+    // Security: Use snprintf instead of sprintf to prevent buffer overflows
     if (config.is24h) {
-        sprintf(timeBuf, "%02d:%02d", hh, mm);
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", hh, mm);
     } else {
         int h12 = hh % 12;
         if (h12 == 0) h12 = 12;
-        sprintf(timeBuf, "%02d:%02d", h12, mm);
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", h12, mm);
     }
 
     tft.setTextSize(4);
@@ -118,7 +122,8 @@ void WatchFace::drawTime() {
     tft.setTextSize(2);
     tft.setTextColor(config.accentColor1, config.bgColor);
     char secBuf[3];
-    sprintf(secBuf, "%02d", ss);
+    // Security: Use snprintf instead of sprintf to prevent buffer overflows
+    snprintf(secBuf, sizeof(secBuf), "%02d", ss);
     tft.drawString(secBuf, 175, 130);
 }
 
@@ -144,7 +149,17 @@ void WatchFace::drawStats() {
 }
 
 uint16_t WatchFace::hexTo565(const char* hex) {
+    // Security: Input validation for data received via BLE
+    if (hex == nullptr) return 0;
     if (hex[0] == '#') hex++;
+
+    size_t len = strlen(hex);
+    if (len != 6) return 0;
+
+    for (size_t i = 0; i < 6; i++) {
+        if (!isxdigit(hex[i])) return 0;
+    }
+
     uint32_t rgb = strtoul(hex, NULL, 16);
     uint8_t r = (rgb >> 16) & 0xFF;
     uint8_t g = (rgb >> 8) & 0xFF;
