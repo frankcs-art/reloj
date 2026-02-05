@@ -1,0 +1,3 @@
+## 2024-05-22 - Wear OS Accessibility and Performance
+**Learning:** For frequently updating Wear OS components (like clocks), using `derivedStateOf` and top-level `DateTimeFormatter` constants significantly improves performance by reducing redundant recompositions and object allocations. Additionally, grouping time displays with `Modifier.semantics(mergeDescendants = true)` provides a much better screen reader experience by announcing the full time instead of fragmented digits.
+**Action:** Always optimize time-based UI with `derivedStateOf` and ensure time displays are semantically grouped for TalkBack.
