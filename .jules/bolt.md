@@ -1,0 +1,3 @@
+## 2025-02-06 - Jetpack Compose Clock Optimizations
+**Learning:** For high-frequency state updates (like a 1Hz clock), using `derivedStateOf` for formatted strings that change less frequently (like HH:mm or Date) significantly reduces recompositions of UI components. However, using `derivedStateOf` for strings that change at the same frequency as the state (like seconds) adds overhead without benefit. Also, memoizing `TextStyle` that depends on `MaterialTheme` properties must be done by capturing the property in the Composable scope and passing it as a key to `remember`.
+**Action:** Use `derivedStateOf` selectively for lower-frequency derivations. Always memoize expensive allocations like `Brush`, `Stroke`, and `TextStyle` in frequently recomposing views.
