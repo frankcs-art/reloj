@@ -29,6 +29,12 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+// Optimized: DateTimeFormatter is thread-safe and should be defined as a top-level constant
+private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SecondsFormatter = DateTimeFormatter.ofPattern("ss")
+private val DateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+private val AccentBlue = Color(0xFF00D2FF)
+
 @Composable
 fun ClockScreen() {
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
@@ -41,9 +47,40 @@ fun ClockScreen() {
         }
     }
 
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val secondsFormatter = DateTimeFormatter.ofPattern("ss")
-    val dateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
+    // Optimized: Use derivedStateOf for formatted strings to minimize redundant work
+    // and prevent unnecessary UI recompositions of the Text components
+    val formattedTime by remember { derivedStateOf { currentTime.format(TimeFormatter) } }
+    val formattedDate by remember { derivedStateOf { currentTime.format(DateFormatter).uppercase() } }
+
+    val display1Style = MaterialTheme.typography.display1
+    val mainTimeStyle = remember(display1Style) {
+        display1Style.copy(
+            fontSize = 54.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            shadow = Shadow(
+                color = AccentBlue.copy(alpha = 0.5f),
+                blurRadius = 20f
+            )
+        )
+    }
+
+    val caption2Style = MaterialTheme.typography.caption2
+    val dateStyle = remember(caption2Style) {
+        caption2Style.copy(
+            color = Color(0xFFAAAAAA),
+            letterSpacing = 2.sp,
+            fontWeight = FontWeight.Light
+        )
+    }
+
+    val caption1Style = MaterialTheme.typography.caption1
+    val secondsStyle = remember(caption1Style) {
+        caption1Style.copy(
+            color = AccentBlue,
+            fontWeight = FontWeight.Medium
+        )
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -67,12 +104,8 @@ fun ClockScreen() {
         ) {
             // Date
             Text(
-                text = currentTime.format(dateFormatter).uppercase(),
-                style = MaterialTheme.typography.caption2.copy(
-                    color = Color(0xFFAAAAAA),
-                    letterSpacing = 2.sp,
-                    fontWeight = FontWeight.Light
-                )
+                text = formattedDate,
+                style = dateStyle
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -82,28 +115,17 @@ fun ClockScreen() {
                 verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    text = currentTime.format(timeFormatter),
-                    style = MaterialTheme.typography.display1.copy(
-                        fontSize = 54.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        shadow = Shadow(
-                            color = Color(0xFF00D2FF).copy(alpha = 0.5f),
-                            blurRadius = 20f
-                        )
-                    )
+                    text = formattedTime,
+                    style = mainTimeStyle
                 )
                 
                 Spacer(modifier = Modifier.width(4.dp))
                 
                 // Seconds
                 Text(
-                    text = currentTime.format(secondsFormatter),
+                    text = currentTime.format(SecondsFormatter),
                     modifier = Modifier.padding(bottom = 12.dp),
-                    style = MaterialTheme.typography.caption1.copy(
-                        color = Color(0xFF00D2FF),
-                        fontWeight = FontWeight.Medium
-                    )
+                    style = secondsStyle
                 )
             }
 
@@ -114,7 +136,7 @@ fun ClockScreen() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatItem(label = "8.2k", subLabel = "STEPS", color = Color(0xFF00D2FF))
+                StatItem(label = "8.2k", subLabel = "STEPS", color = AccentBlue)
                 StatItem(label = "85", subLabel = "BPM", color = Color(0xFFFF2D55))
             }
         }
@@ -144,7 +166,7 @@ fun AmbientGlow() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF00D2FF).copy(alpha = alpha), Color.Transparent),
+                colors = listOf(AccentBlue.copy(alpha = alpha), Color.Transparent),
                 center = center,
                 radius = size.minDimension / 1.5f
             ),
@@ -156,28 +178,36 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
+    // Optimized: Memoize Brushes and Strokes to avoid allocations during recomposition
+    val outerGradient = remember {
+        Brush.sweepGradient(
+            0.0f to AccentBlue,
+            0.5f to Color(0xFF9D50BB),
+            1.0f to AccentBlue
+        )
+    }
+    val outerStroke = remember { Stroke(width = 8f, cap = StrokeCap.Round) }
+    val innerStroke = remember { Stroke(width = 4f, cap = StrokeCap.Round) }
+    val backgroundRingColor = remember { Color.White.copy(alpha = 0.05f) }
+    val batteryColor = remember { AccentBlue.copy(alpha = 0.6f) }
+
     Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
-        val strokeWidth = 8f
         val innerPadding = 12f
         
         // Outer Ring (Steps progress simulation)
         drawArc(
-            color = Color.White.copy(alpha = 0.05f),
+            color = backgroundRingColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            style = outerStroke
         )
         drawArc(
-            brush = Brush.sweepGradient(
-                0.0f to Color(0xFF00D2FF),
-                0.5f to Color(0xFF9D50BB),
-                1.0f to Color(0xFF00D2FF)
-            ),
+            brush = outerGradient,
             startAngle = -90f,
             sweepAngle = 280f,
             useCenter = false,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            style = outerStroke
         )
 
         // Inner Ring (Battery simulation)
@@ -188,20 +218,20 @@ fun ClockProgressRings() {
         val innerTopLeft = Offset(innerPadding, innerPadding)
 
         drawArc(
-            color = Color.White.copy(alpha = 0.05f),
+            color = backgroundRingColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
-            style = Stroke(width = 4f, cap = StrokeCap.Round),
+            style = innerStroke,
             size = innerSize,
             topLeft = innerTopLeft
         )
         drawArc(
-            color = Color(0xFF00D2FF).copy(alpha = 0.6f),
+            color = batteryColor,
             startAngle = -90f,
             sweepAngle = 210f,
             useCenter = false,
-            style = Stroke(width = 4f, cap = StrokeCap.Round),
+            style = innerStroke,
             size = innerSize,
             topLeft = innerTopLeft
         )
@@ -210,29 +240,42 @@ fun ClockProgressRings() {
 
 @Composable
 fun StatItem(label: String, subLabel: String, color: Color) {
+    val backgroundColor = remember { Color.White.copy(alpha = 0.05f) }
+    val shape = remember { androidx.compose.foundation.shape.RoundedCornerShape(8.dp) }
+
+    val caption1 = MaterialTheme.typography.caption1
+    val labelStyle = remember(caption1, color) {
+        caption1.copy(
+            color = color,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 14.sp
+        )
+    }
+
+    val caption2 = MaterialTheme.typography.caption2
+    val subLabelStyle = remember(caption2) {
+        caption2.copy(
+            color = Color.White.copy(alpha = 0.4f),
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.background(
-            color = Color.White.copy(alpha = 0.05f),
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            color = backgroundColor,
+            shape = shape
         ).padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.caption1.copy(
-                color = color,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 14.sp
-            )
+            style = labelStyle
         )
         Text(
             text = subLabel,
-            style = MaterialTheme.typography.caption2.copy(
-                color = Color.White.copy(alpha = 0.4f),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
+            style = subLabelStyle
         )
     }
 }
