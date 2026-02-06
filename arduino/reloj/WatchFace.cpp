@@ -104,11 +104,12 @@ void WatchFace::drawTime() {
     // Draw Main Time
     char timeBuf[10];
     if (config.is24h) {
-        sprintf(timeBuf, "%02d:%02d", hh, mm);
+        // SECURITY: Use snprintf to prevent buffer overflows
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", hh, mm);
     } else {
         int h12 = hh % 12;
         if (h12 == 0) h12 = 12;
-        sprintf(timeBuf, "%02d:%02d", h12, mm);
+        snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", h12, mm);
     }
 
     tft.setTextSize(4);
@@ -118,7 +119,8 @@ void WatchFace::drawTime() {
     tft.setTextSize(2);
     tft.setTextColor(config.accentColor1, config.bgColor);
     char secBuf[3];
-    sprintf(secBuf, "%02d", ss);
+    // SECURITY: Use snprintf to prevent buffer overflows
+    snprintf(secBuf, sizeof(secBuf), "%02d", ss);
     tft.drawString(secBuf, 175, 130);
 }
 
@@ -144,8 +146,15 @@ void WatchFace::drawStats() {
 }
 
 uint16_t WatchFace::hexTo565(const char* hex) {
+    // SECURITY: Validate input to prevent null pointer dereference
+    if (hex == nullptr) return 0;
+
     if (hex[0] == '#') hex++;
-    uint32_t rgb = strtoul(hex, NULL, 16);
+
+    // SECURITY: Basic length validation
+    if (strlen(hex) < 6) return 0;
+
+    uint32_t rgb = strtoul(hex, nullptr, 16);
     uint8_t r = (rgb >> 16) & 0xFF;
     uint8_t g = (rgb >> 8) & 0xFF;
     uint8_t b = rgb & 0xFF;
