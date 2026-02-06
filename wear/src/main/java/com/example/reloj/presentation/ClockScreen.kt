@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -79,7 +81,10 @@ fun ClockScreen() {
 
             // Main Time
             Row(
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    contentDescription = "Hora: ${currentTime.format(timeFormatter)}, ${currentTime.format(secondsFormatter)} segundos"
+                }
             ) {
                 Text(
                     text = currentTime.format(timeFormatter),
@@ -156,7 +161,14 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
-    Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
+    Canvas(
+        modifier = Modifier
+            .size(200.dp)
+            .padding(10.dp)
+            .semantics {
+                contentDescription = "Indicadores de progreso de pasos y batería"
+            }
+    ) {
         val strokeWidth = 8f
         val innerPadding = 12f
         
@@ -229,7 +241,7 @@ fun StatItem(label: String, subLabel: String, color: Color) {
             text = subLabel,
             style = MaterialTheme.typography.caption2.copy(
                 color = Color.White.copy(alpha = 0.4f),
-                fontSize = 7.sp,
+                fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
