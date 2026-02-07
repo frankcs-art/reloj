@@ -35,6 +35,20 @@ private val SecondsFormatter = DateTimeFormatter.ofPattern("ss")
 private val DateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
 private val AccentBlue = Color(0xFF00D2FF)
 
+// Optimized: Move constant UI values to top-level to avoid repeated allocations and remember checks
+private val StatItemBackgroundColor = Color.White.copy(alpha = 0.05f)
+private val StatItemShape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+
+private val ProgressOuterGradient = Brush.sweepGradient(
+    0.0f to AccentBlue,
+    0.5f to Color(0xFF9D50BB),
+    1.0f to AccentBlue
+)
+private val ProgressOuterStroke = Stroke(width = 8f, cap = StrokeCap.Round)
+private val ProgressInnerStroke = Stroke(width = 4f, cap = StrokeCap.Round)
+private val ProgressBackgroundRingColor = Color.White.copy(alpha = 0.05f)
+private val ProgressBatteryColor = AccentBlue.copy(alpha = 0.6f)
+
 @Composable
 fun ClockScreen() {
     var currentTime by remember { mutableStateOf(LocalTime.now()) }
@@ -153,7 +167,8 @@ fun ClockScreen() {
 @Composable
 fun AmbientGlow() {
     val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val alpha by infiniteTransition.animateFloat(
+    // Optimized: Keep alpha as a State object to avoid reading it in the Composable scope
+    val alphaState = infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 0.4f,
         animationSpec = infiniteRepeatable(
@@ -163,10 +178,19 @@ fun AmbientGlow() {
         label = "alpha"
     )
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    // Optimized: Use graphicsLayer with a lambda to defer state reading.
+    // This prevents AmbientGlow from recomposing 60 times per second and
+    // allows the Canvas content to be cached as a layer.
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                alpha = alphaState.value
+            }
+    ) {
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(AccentBlue.copy(alpha = alpha), Color.Transparent),
+                colors = listOf(AccentBlue, Color.Transparent),
                 center = center,
                 radius = size.minDimension / 1.5f
             ),
@@ -178,36 +202,23 @@ fun AmbientGlow() {
 
 @Composable
 fun ClockProgressRings() {
-    // Optimized: Memoize Brushes and Strokes to avoid allocations during recomposition
-    val outerGradient = remember {
-        Brush.sweepGradient(
-            0.0f to AccentBlue,
-            0.5f to Color(0xFF9D50BB),
-            1.0f to AccentBlue
-        )
-    }
-    val outerStroke = remember { Stroke(width = 8f, cap = StrokeCap.Round) }
-    val innerStroke = remember { Stroke(width = 4f, cap = StrokeCap.Round) }
-    val backgroundRingColor = remember { Color.White.copy(alpha = 0.05f) }
-    val batteryColor = remember { AccentBlue.copy(alpha = 0.6f) }
-
     Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
         val innerPadding = 12f
         
         // Outer Ring (Steps progress simulation)
         drawArc(
-            color = backgroundRingColor,
+            color = ProgressBackgroundRingColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
-            style = outerStroke
+            style = ProgressOuterStroke
         )
         drawArc(
-            brush = outerGradient,
+            brush = ProgressOuterGradient,
             startAngle = -90f,
             sweepAngle = 280f,
             useCenter = false,
-            style = outerStroke
+            style = ProgressOuterStroke
         )
 
         // Inner Ring (Battery simulation)
@@ -218,20 +229,20 @@ fun ClockProgressRings() {
         val innerTopLeft = Offset(innerPadding, innerPadding)
 
         drawArc(
-            color = backgroundRingColor,
+            color = ProgressBackgroundRingColor,
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,
-            style = innerStroke,
+            style = ProgressInnerStroke,
             size = innerSize,
             topLeft = innerTopLeft
         )
         drawArc(
-            color = batteryColor,
+            color = ProgressBatteryColor,
             startAngle = -90f,
             sweepAngle = 210f,
             useCenter = false,
-            style = innerStroke,
+            style = ProgressInnerStroke,
             size = innerSize,
             topLeft = innerTopLeft
         )
@@ -240,9 +251,6 @@ fun ClockProgressRings() {
 
 @Composable
 fun StatItem(label: String, subLabel: String, color: Color) {
-    val backgroundColor = remember { Color.White.copy(alpha = 0.05f) }
-    val shape = remember { androidx.compose.foundation.shape.RoundedCornerShape(8.dp) }
-
     val caption1 = MaterialTheme.typography.caption1
     val labelStyle = remember(caption1, color) {
         caption1.copy(
@@ -265,8 +273,8 @@ fun StatItem(label: String, subLabel: String, color: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.background(
-            color = backgroundColor,
-            shape = shape
+            color = StatItemBackgroundColor,
+            shape = StatItemShape
         ).padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
