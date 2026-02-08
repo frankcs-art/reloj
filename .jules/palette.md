@@ -1,0 +1,3 @@
+## 2025-01-24 - Semantic Buttons and Keyboard Navigation in Watch Face Preview
+**Learning:** Using `div` elements for interactive icons prevents keyboard navigation and screen reader accessibility. Switching to `button` elements requires a CSS reset (padding, border, font) to maintain visual design. Additionally, `hover`-only visibility for interactive panels (like `app-selector`) must be supplemented with `:focus-within` to ensure keyboard users can discover and interact with the panel.
+**Action:** Always use `<button>` for interactive icons, provide `aria-label`, and ensure container visibility for focused children using `:focus-within`.
