@@ -1,3 +1,7 @@
 ## 2025-02-06 - Jetpack Compose Clock Optimizations
 **Learning:** For high-frequency state updates (like a 1Hz clock), using `derivedStateOf` for formatted strings that change less frequently (like HH:mm or Date) significantly reduces recompositions of UI components. However, using `derivedStateOf` for strings that change at the same frequency as the state (like seconds) adds overhead without benefit. Also, memoizing `TextStyle` that depends on `MaterialTheme` properties must be done by capturing the property in the Composable scope and passing it as a key to `remember`.
 **Action:** Use `derivedStateOf` selectively for lower-frequency derivations. Always memoize expensive allocations like `Brush`, `Stroke`, and `TextStyle` in frequently recomposing views.
+
+## 2026-02-08 - GPU-Accelerated Animations & Drawing Cache
+**Learning:** High-frequency animations (e.g., a 60fps glow) should defer state reading (like alpha) to the GPU using `Modifier.graphicsLayer { ... }`. This prevents full recompositions of the UI tree. Additionally, `drawWithCache` is superior to `Canvas` or `drawBehind` for static or infrequently changing content, as it memoizes coordinate-dependent objects like `Brush` and `Path` based on size changes. Note: `center` is not directly available in `CacheDrawScope`; use `Offset(size.width / 2f, size.height / 2f)` instead.
+**Action:** Use `graphicsLayer` for any property-only animation and `drawWithCache` to memoize drawing state.

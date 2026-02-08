@@ -1,6 +1,7 @@
 package com.example.reloj.presentation
 
 import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -34,6 +36,19 @@ private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val SecondsFormatter = DateTimeFormatter.ofPattern("ss")
 private val DateFormatter = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
 private val AccentBlue = Color(0xFF00D2FF)
+
+// Optimized: Static UI constants moved to top-level to avoid 'remember' overhead
+private val OuterStroke = Stroke(width = 8f, cap = StrokeCap.Round)
+private val InnerStroke = Stroke(width = 4f, cap = StrokeCap.Round)
+private val BackgroundRingColor = Color.White.copy(alpha = 0.05f)
+private val BatteryColor = AccentBlue.copy(alpha = 0.6f)
+private val OuterGradient = Brush.sweepGradient(
+    0.0f to AccentBlue,
+    0.5f to Color(0xFF9D50BB),
+    1.0f to AccentBlue
+)
+private val StatItemBackgroundColor = Color.White.copy(alpha = 0.05f)
+private val StatItemShape = RoundedCornerShape(8.dp)
 
 @Composable
 fun ClockScreen() {
@@ -153,7 +168,7 @@ fun ClockScreen() {
 @Composable
 fun AmbientGlow() {
     val infiniteTransition = rememberInfiniteTransition(label = "glow")
-    val alpha by infiniteTransition.animateFloat(
+    val animatedAlpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 0.4f,
         animationSpec = infiniteRepeatable(
@@ -163,86 +178,87 @@ fun AmbientGlow() {
         label = "alpha"
     )
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(AccentBlue.copy(alpha = alpha), Color.Transparent),
-                center = center,
-                radius = size.minDimension / 1.5f
-            ),
-            radius = size.minDimension / 1.5f,
-            center = center
-        )
-    }
+    // Optimized: Use graphicsLayer to defer alpha updates to GPU and drawWithCache to memoize the Brush
+    Spacer(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = animatedAlpha }
+            .drawWithCache {
+                val glowBrush = Brush.radialGradient(
+                    colors = listOf(AccentBlue, Color.Transparent),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.minDimension / 1.5f
+                )
+                onDrawBehind {
+                    drawCircle(
+                        brush = glowBrush,
+                        radius = size.minDimension / 1.5f,
+                        center = center
+                    )
+                }
+            }
+    )
 }
 
 @Composable
 fun ClockProgressRings() {
-    // Optimized: Memoize Brushes and Strokes to avoid allocations during recomposition
-    val outerGradient = remember {
-        Brush.sweepGradient(
-            0.0f to AccentBlue,
-            0.5f to Color(0xFF9D50BB),
-            1.0f to AccentBlue
-        )
-    }
-    val outerStroke = remember { Stroke(width = 8f, cap = StrokeCap.Round) }
-    val innerStroke = remember { Stroke(width = 4f, cap = StrokeCap.Round) }
-    val backgroundRingColor = remember { Color.White.copy(alpha = 0.05f) }
-    val batteryColor = remember { AccentBlue.copy(alpha = 0.6f) }
+    // Optimized: Use drawWithCache to avoid re-calculating drawing parameters on every recomposition
+    // Since these rings are currently static (mocked), we only draw them once unless size changes.
+    Spacer(
+        modifier = Modifier
+            .size(200.dp)
+            .padding(10.dp)
+            .drawWithCache {
+                val innerPadding = 12f
+                val innerSize = size.copy(
+                    width = size.width - (innerPadding * 2),
+                    height = size.height - (innerPadding * 2)
+                )
+                val innerTopLeft = Offset(innerPadding, innerPadding)
 
-    Canvas(modifier = Modifier.size(200.dp).padding(10.dp)) {
-        val innerPadding = 12f
-        
-        // Outer Ring (Steps progress simulation)
-        drawArc(
-            color = backgroundRingColor,
-            startAngle = 0f,
-            sweepAngle = 360f,
-            useCenter = false,
-            style = outerStroke
-        )
-        drawArc(
-            brush = outerGradient,
-            startAngle = -90f,
-            sweepAngle = 280f,
-            useCenter = false,
-            style = outerStroke
-        )
+                onDrawBehind {
+                    // Outer Ring (Steps progress simulation)
+                    drawArc(
+                        color = BackgroundRingColor,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = OuterStroke
+                    )
+                    drawArc(
+                        brush = OuterGradient,
+                        startAngle = -90f,
+                        sweepAngle = 280f,
+                        useCenter = false,
+                        style = OuterStroke
+                    )
 
-        // Inner Ring (Battery simulation)
-        val innerSize = size.copy(
-            width = size.width - (innerPadding * 2),
-            height = size.height - (innerPadding * 2)
-        )
-        val innerTopLeft = Offset(innerPadding, innerPadding)
-
-        drawArc(
-            color = backgroundRingColor,
-            startAngle = 0f,
-            sweepAngle = 360f,
-            useCenter = false,
-            style = innerStroke,
-            size = innerSize,
-            topLeft = innerTopLeft
-        )
-        drawArc(
-            color = batteryColor,
-            startAngle = -90f,
-            sweepAngle = 210f,
-            useCenter = false,
-            style = innerStroke,
-            size = innerSize,
-            topLeft = innerTopLeft
-        )
-    }
+                    // Inner Ring (Battery simulation)
+                    drawArc(
+                        color = BackgroundRingColor,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = InnerStroke,
+                        size = innerSize,
+                        topLeft = innerTopLeft
+                    )
+                    drawArc(
+                        color = BatteryColor,
+                        startAngle = -90f,
+                        sweepAngle = 210f,
+                        useCenter = false,
+                        style = InnerStroke,
+                        size = innerSize,
+                        topLeft = innerTopLeft
+                    )
+                }
+            }
+    )
 }
 
 @Composable
 fun StatItem(label: String, subLabel: String, color: Color) {
-    val backgroundColor = remember { Color.White.copy(alpha = 0.05f) }
-    val shape = remember { androidx.compose.foundation.shape.RoundedCornerShape(8.dp) }
-
     val caption1 = MaterialTheme.typography.caption1
     val labelStyle = remember(caption1, color) {
         caption1.copy(
@@ -265,8 +281,8 @@ fun StatItem(label: String, subLabel: String, color: Color) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.background(
-            color = backgroundColor,
-            shape = shape
+            color = StatItemBackgroundColor,
+            shape = StatItemShape
         ).padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
