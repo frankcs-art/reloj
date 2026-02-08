@@ -1,4 +1,5 @@
 #include "WatchFace.h"
+#include <ctype.h>
 
 WatchFace::WatchFace() : tft(TFT_eSPI()) {
     // Default configuration (Galaxy Theme)
@@ -151,8 +152,13 @@ uint16_t WatchFace::hexTo565(const char* hex) {
 
     if (hex[0] == '#') hex++;
 
-    // SECURITY: Basic length validation
-    if (strlen(hex) < 6) return 0;
+    // SECURITY: Robust validation of untrusted BLE input
+    // Ensure exactly 6 hex digits remain
+    if (strlen(hex) != 6) return 0;
+
+    for (int i = 0; i < 6; i++) {
+        if (!isxdigit((unsigned char)hex[i])) return 0;
+    }
 
     uint32_t rgb = strtoul(hex, nullptr, 16);
     uint8_t r = (rgb >> 16) & 0xFF;
