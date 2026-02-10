@@ -63,8 +63,10 @@ private:
 
     /**
      * @brief Convert a hex color string (e.g., "#FF0000") to RGB565 format.
+     * @param hex The hex string to convert.
+     * @param defaultColor Color to return if the hex string is invalid or null.
      */
-    uint16_t hexTo565(const char* hex);
+    uint16_t hexTo565(const char* hex, uint16_t defaultColor);
 };
 
 #endif

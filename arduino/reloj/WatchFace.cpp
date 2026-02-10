@@ -28,16 +28,32 @@ void WatchFace::updateConfig(String json) {
         return;
     }
 
-    if (doc.containsKey("bgColor")) config.bgColor = hexTo565(doc["bgColor"]);
-    if (doc.containsKey("accentColor1")) config.accentColor1 = hexTo565(doc["accentColor1"]);
-    if (doc.containsKey("accentColor2")) config.accentColor2 = hexTo565(doc["accentColor2"]);
-    if (doc.containsKey("textColor")) config.textColor = hexTo565(doc["textColor"]);
+    // SECURITY: Ensure the root is an object to prevent unexpected behavior with non-object JSON
+    if (!doc.is<JsonObject>()) {
+        Serial.println("Warning: Received JSON is not an object");
+        return;
+    }
+
+    bool bgChanged = false;
+    if (doc.containsKey("bgColor")) {
+        uint16_t newBg = hexTo565(doc["bgColor"], config.bgColor);
+        if (newBg != config.bgColor) {
+            config.bgColor = newBg;
+            bgChanged = true;
+        }
+    }
+
+    if (doc.containsKey("accentColor1")) config.accentColor1 = hexTo565(doc["accentColor1"], config.accentColor1);
+    if (doc.containsKey("accentColor2")) config.accentColor2 = hexTo565(doc["accentColor2"], config.accentColor2);
+    if (doc.containsKey("textColor")) config.textColor = hexTo565(doc["textColor"], config.textColor);
     if (doc.containsKey("showSteps")) config.showSteps = doc["showSteps"];
     if (doc.containsKey("showBPM")) config.showBPM = doc["showBPM"];
     if (doc.containsKey("is24h")) config.is24h = doc["is24h"];
 
-    // Redraw background if changed
-    tft.fillScreen(config.bgColor);
+    // Redraw background only if it changed to prevent UI-based DoS and flickering
+    if (bgChanged) {
+        tft.fillScreen(config.bgColor);
+    }
 }
 
 void WatchFace::updateTime() {
@@ -147,17 +163,18 @@ void WatchFace::drawStats() {
     }
 }
 
-uint16_t WatchFace::hexTo565(const char* hex) {
+uint16_t WatchFace::hexTo565(const char* hex, uint16_t defaultColor) {
     // SECURITY: Validate input to prevent null pointer dereference
-    if (hex == nullptr) return 0;
+    if (hex == nullptr) return defaultColor;
 
     if (hex[0] == '#') hex++;
 
     // SECURITY: Robust validation of hex string length and characters
-    if (strlen(hex) != 6) return 0;
+    // Only update if we have a valid 6-digit hex string
+    if (strlen(hex) != 6) return defaultColor;
 
     for (int i = 0; i < 6; i++) {
-        if (!isxdigit((unsigned char)hex[i])) return 0;
+        if (!isxdigit((unsigned char)hex[i])) return defaultColor;
     }
 
     uint32_t rgb = strtoul(hex, nullptr, 16);
