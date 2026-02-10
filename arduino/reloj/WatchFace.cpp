@@ -1,4 +1,5 @@
 #include "WatchFace.h"
+#include <ctype.h>
 
 WatchFace::WatchFace() : tft(TFT_eSPI()) {
     // Default configuration (Galaxy Theme)
@@ -30,6 +31,7 @@ void WatchFace::updateConfig(String json) {
     if (doc.containsKey("bgColor")) config.bgColor = hexTo565(doc["bgColor"]);
     if (doc.containsKey("accentColor1")) config.accentColor1 = hexTo565(doc["accentColor1"]);
     if (doc.containsKey("accentColor2")) config.accentColor2 = hexTo565(doc["accentColor2"]);
+    if (doc.containsKey("textColor")) config.textColor = hexTo565(doc["textColor"]);
     if (doc.containsKey("showSteps")) config.showSteps = doc["showSteps"];
     if (doc.containsKey("showBPM")) config.showBPM = doc["showBPM"];
     if (doc.containsKey("is24h")) config.is24h = doc["is24h"];
@@ -151,8 +153,12 @@ uint16_t WatchFace::hexTo565(const char* hex) {
 
     if (hex[0] == '#') hex++;
 
-    // SECURITY: Basic length validation
-    if (strlen(hex) < 6) return 0;
+    // SECURITY: Robust validation of hex string length and characters
+    if (strlen(hex) != 6) return 0;
+
+    for (int i = 0; i < 6; i++) {
+        if (!isxdigit((unsigned char)hex[i])) return 0;
+    }
 
     uint32_t rgb = strtoul(hex, nullptr, 16);
     uint8_t r = (rgb >> 16) & 0xFF;
