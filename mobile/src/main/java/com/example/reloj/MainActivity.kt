@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,15 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+
+// Optimized: Static UI constants defined as top-level properties to avoid overhead of remember
+// and redundant allocations during recompositions.
+private val TimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val BackgroundGradient = Brush.verticalGradient(
+    colors = listOf(Color(0xFF0F0C29), Color(0xFF302B63), Color(0xFF24243E))
+)
+private val StatContainerShape = RoundedCornerShape(24.dp)
+private val StatContainerColor = Color.White.copy(alpha = 0.05f)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,24 +59,23 @@ fun MobileClockPreview() {
         }
     }
 
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+    // Optimized: Use derivedStateOf for formatted strings to minimize redundant work
+    // and prevent unnecessary UI recompositions of the Text component.
+    // Since HH:mm only changes every minute, this reduces recompositions from 1Hz to 1/60Hz.
+    val formattedTime by remember { derivedStateOf { currentTime.format(TimeFormatter) } }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0F0C29), Color(0xFF302B63), Color(0xFF24243E))
-                )
-            ),
+            .background(BackgroundGradient),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .background(
-                    Color.White.copy(alpha = 0.05f),
-                    shape = RoundedCornerShape(24.dp)
+                    color = StatContainerColor,
+                    shape = StatContainerShape
                 )
                 .padding(32.dp)
         ) {
@@ -81,7 +90,7 @@ fun MobileClockPreview() {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = currentTime.format(timeFormatter),
+                text = formattedTime,
                 color = Color.White,
                 fontSize = 80.sp,
                 fontWeight = FontWeight.Black
