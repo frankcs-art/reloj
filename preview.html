@@ -277,7 +277,6 @@
         }
 
         .json-output {
-            margin-top: 15px;
             background: #000;
             padding: 10px;
             border-radius: 4px;
@@ -285,6 +284,7 @@
             font-size: 10px;
             white-space: pre-wrap;
             color: #00FF00;
+            border: 1px solid rgba(0, 210, 255, 0.2);
         }
 
     </style>
@@ -320,6 +320,11 @@
                 <option value="24h">24 Horas</option>
                 <option value="12h">12 Horas</option>
             </select>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: var(--accent-blue); letter-spacing: 1px;">JSON CONFIG</span>
+            <button id="copy-btn" aria-label="Copiar configuración JSON" style="background: var(--accent-blue); border: none; border-radius: 4px; padding: 4px 12px; font-size: 11px; cursor: pointer; color: #000; font-weight: 700; transition: all 0.2s;">Copiar</button>
         </div>
         <div class="json-output" id="json-out"></div>
     </div>
@@ -425,6 +430,20 @@
         document.getElementById('cfg-steps').addEventListener('change', (e) => { config.showSteps = e.target.checked; updateUI(); });
         document.getElementById('cfg-bpm').addEventListener('change', (e) => { config.showBPM = e.target.checked; updateUI(); });
         document.getElementById('cfg-format').addEventListener('change', (e) => { config.is24h = e.target.value === '24h'; updateUI(); });
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const jsonText = document.getElementById('json-out').textContent;
+            navigator.clipboard.writeText(jsonText).then(() => {
+                const btn = document.getElementById('copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '¡Copiado!';
+                btn.style.background = '#00b875';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            });
+        });
 
         setInterval(updateTime, 1000);
         updateTime();
