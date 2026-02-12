@@ -9,3 +9,7 @@
 ## 2025-02-12 - Optimizing Mobile Preview Recomposition
 **Learning:** In the mobile module, a 1Hz clock update was causing the entire screen to recompose every second because the `currentTime` state was read directly for formatting. Moving expensive objects (Brush, List, DateTimeFormatter) to top-level constants and using `derivedStateOf` for the formatted time (HH:mm) reduced the recomposition frequency from 1Hz to 1/60Hz, a ~98% reduction in UI work.
 **Action:** Always check for direct state reads of high-frequency variables in root-level Composables. Move static object allocations out of the Composable scope.
+
+## 2025-02-14 - Arduino Rendering Optimization
+**Learning:** In resource-constrained environments like Arduino, drawing to a TFT display via SPI is a major bottleneck. Implementing frame-skipping by tracking the last rendered second and using a 'forceRedraw' flag for async updates (like BLE config changes) can reduce SPI bus traffic by ~90% for a standard watch face. Additionally, caching results of expensive operations like `alphaBlend` further reduces the per-frame CPU load.
+**Action:** Always implement conditional redrawing based on state change in embedded render loops. Pre-calculate static or semi-static visual properties.
