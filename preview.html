@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';">
     <title>Vista Previa - Reloj Galáctico</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
@@ -405,6 +406,10 @@
             jsonOut.textContent = JSON.stringify(config, null, 2);
         }
 
+        function isValidHex(hex) {
+            return /^#[0-9A-F]{6}$/i.test(hex);
+        }
+
         function updateTime() {
             const now = new Date();
             let hours = now.getHours();
@@ -424,9 +429,24 @@
         }
 
         // Event Listeners
-        document.getElementById('cfg-bg').addEventListener('input', (e) => { config.bgColor = e.target.value; updateUI(); });
-        document.getElementById('cfg-accent1').addEventListener('input', (e) => { config.accentColor1 = e.target.value; updateUI(); });
-        document.getElementById('cfg-accent2').addEventListener('input', (e) => { config.accentColor2 = e.target.value; updateUI(); });
+        document.getElementById('cfg-bg').addEventListener('input', (e) => {
+            if (isValidHex(e.target.value)) {
+                config.bgColor = e.target.value;
+                updateUI();
+            }
+        });
+        document.getElementById('cfg-accent1').addEventListener('input', (e) => {
+            if (isValidHex(e.target.value)) {
+                config.accentColor1 = e.target.value;
+                updateUI();
+            }
+        });
+        document.getElementById('cfg-accent2').addEventListener('input', (e) => {
+            if (isValidHex(e.target.value)) {
+                config.accentColor2 = e.target.value;
+                updateUI();
+            }
+        });
         document.getElementById('cfg-steps').addEventListener('change', (e) => { config.showSteps = e.target.checked; updateUI(); });
         document.getElementById('cfg-bpm').addEventListener('change', (e) => { config.showBPM = e.target.checked; updateUI(); });
         document.getElementById('cfg-format').addEventListener('change', (e) => { config.is24h = e.target.value === '24h'; updateUI(); });
