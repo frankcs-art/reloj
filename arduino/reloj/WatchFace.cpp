@@ -10,11 +10,16 @@ WatchFace::WatchFace() : tft(TFT_eSPI()) {
     config.showSteps = true;
     config.showBPM = true;
     config.is24h = true;
+
+    // Initialize optimization flags
+    last_ss = -1;
+    forceRedraw = true;
 }
 
 void WatchFace::init() {
     tft.init();
     tft.setRotation(0);
+    updateCachedColors();
     tft.fillScreen(config.bgColor);
 }
 
@@ -54,6 +59,10 @@ void WatchFace::updateConfig(String json) {
     if (bgChanged) {
         tft.fillScreen(config.bgColor);
     }
+
+    // Optimization: Update cached colors and force a full redraw on config change
+    updateCachedColors();
+    forceRedraw = true;
 }
 
 void WatchFace::updateTime() {
@@ -68,6 +77,16 @@ void WatchFace::updateTime() {
 }
 
 void WatchFace::render() {
+    // Optimization: Only redraw if the second has changed or a redraw is forced.
+    // This reduces SPI bus traffic and CPU load by ~90% (from 10Hz to 1Hz).
+    if (ss == last_ss && !forceRedraw) {
+        delay(50); // Short delay to yield CPU
+        return;
+    }
+
+    last_ss = ss;
+    forceRedraw = false;
+
     // In a real application, you might use Tft-eSPI Sprites to avoid flickering
     // For this example, we render directly to the screen.
 
@@ -83,12 +102,19 @@ void WatchFace::render() {
     // 4. Draw Stats (Steps & BPM)
     drawStats();
 
-    delay(100); // Small delay to prevent high CPU usage
+    delay(20); // Minimal delay
+}
+
+void WatchFace::updateCachedColors() {
+    // Optimization: Expensive alphaBlend operations are pre-calculated here
+    // rather than on every frame in the render loop.
+    cachedGlowColor = tft.alphaBlend(128, config.accentColor1, config.bgColor);
+    cachedRingBgColor = tft.alphaBlend(32, 0xFFFF, config.bgColor);
 }
 
 void WatchFace::drawGlow() {
-    // Draw a subtle outer ring to simulate glow
-    tft.drawCircle(120, 120, 110, tft.alphaBlend(128, config.accentColor1, config.bgColor));
+    // Draw a subtle outer ring to simulate glow using pre-calculated color
+    tft.drawCircle(120, 120, 110, cachedGlowColor);
 }
 
 void WatchFace::drawProgressRings() {
@@ -98,7 +124,7 @@ void WatchFace::drawProgressRings() {
     // Outer Ring (e.g., Steps)
     // TFT_eSPI's drawSmoothArc is ideal for this if enabled in User_Setup.h
     // Here we use a simpler approach for compatibility
-    tft.drawCircle(centerX, centerY, 100, tft.alphaBlend(32, 0xFFFF, config.bgColor));
+    tft.drawCircle(centerX, centerY, 100, cachedRingBgColor);
 
     // Draw progress part (mocking 75% progress)
     // Use drawSmoothArc if available: tft.drawSmoothArc(centerX, centerY, 100, 90, 0, 270, config.accentColor1, config.bgColor);
@@ -106,7 +132,7 @@ void WatchFace::drawProgressRings() {
     tft.drawCircle(centerX, centerY, 101, config.accentColor1);
 
     // Inner Ring (e.g., Battery)
-    tft.drawCircle(centerX, centerY, 90, tft.alphaBlend(32, 0xFFFF, config.bgColor));
+    tft.drawCircle(centerX, centerY, 90, cachedRingBgColor);
     tft.drawCircle(centerX, centerY, 91, config.accentColor2);
 }
 

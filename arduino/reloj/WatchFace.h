@@ -52,14 +52,25 @@ private:
 
     // Time variables
     int hh, mm, ss;
+    int last_ss;
+    bool forceRedraw;
     String dayStr;
     String dateStr;
+
+    // Cached colors for performance optimization
+    uint16_t cachedGlowColor;
+    uint16_t cachedRingBgColor;
 
     // Rendering sub-functions
     void drawGlow();
     void drawProgressRings();
     void drawTime();
     void drawStats();
+
+    /**
+     * @brief Pre-calculate blended colors to avoid expensive alphaBlend calls during render.
+     */
+    void updateCachedColors();
 
     /**
      * @brief Convert a hex color string (e.g., "#FF0000") to RGB565 format.
