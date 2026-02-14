@@ -10,6 +10,17 @@ WatchFace::WatchFace() : tft(TFT_eSPI()) {
     config.showSteps = true;
     config.showBPM = true;
     config.is24h = true;
+
+    // Optimized: Initialize performance tracking variables
+    last_ss = -1;
+    forceRedraw = true;
+    updateCachedColors();
+}
+
+void WatchFace::updateCachedColors() {
+    // Optimized: Pre-calculate expensive alphaBlend operations
+    cachedGlowColor = tft.alphaBlend(128, config.accentColor1, config.bgColor);
+    cachedRingBgColor = tft.alphaBlend(32, 0xFFFF, config.bgColor);
 }
 
 void WatchFace::init() {
@@ -43,12 +54,37 @@ void WatchFace::updateConfig(String json) {
         }
     }
 
-    if (doc.containsKey("accentColor1")) config.accentColor1 = hexTo565(doc["accentColor1"], config.accentColor1);
-    if (doc.containsKey("accentColor2")) config.accentColor2 = hexTo565(doc["accentColor2"], config.accentColor2);
-    if (doc.containsKey("textColor")) config.textColor = hexTo565(doc["textColor"], config.textColor);
-    if (doc.containsKey("showSteps")) config.showSteps = doc["showSteps"];
-    if (doc.containsKey("showBPM")) config.showBPM = doc["showBPM"];
-    if (doc.containsKey("is24h")) config.is24h = doc["is24h"];
+    bool configChanged = false;
+    if (doc.containsKey("accentColor1")) {
+        uint16_t c1 = hexTo565(doc["accentColor1"], config.accentColor1);
+        if (c1 != config.accentColor1) { config.accentColor1 = c1; configChanged = true; }
+    }
+    if (doc.containsKey("accentColor2")) {
+        uint16_t c2 = hexTo565(doc["accentColor2"], config.accentColor2);
+        if (c2 != config.accentColor2) { config.accentColor2 = c2; configChanged = true; }
+    }
+    if (doc.containsKey("textColor")) {
+        uint16_t tc = hexTo565(doc["textColor"], config.textColor);
+        if (tc != config.textColor) { config.textColor = tc; configChanged = true; }
+    }
+    if (doc.containsKey("showSteps")) {
+        bool ss = doc["showSteps"];
+        if (ss != config.showSteps) { config.showSteps = ss; configChanged = true; }
+    }
+    if (doc.containsKey("showBPM")) {
+        bool sb = doc["showBPM"];
+        if (sb != config.showBPM) { config.showBPM = sb; configChanged = true; }
+    }
+    if (doc.containsKey("is24h")) {
+        bool i24 = doc["is24h"];
+        if (i24 != config.is24h) { config.is24h = i24; configChanged = true; }
+    }
+
+    // Optimized: Only update cache and force redraw if something actually changed
+    if (bgChanged || configChanged) {
+        updateCachedColors();
+        forceRedraw = true;
+    }
 
     // Redraw background only if it changed to prevent UI-based DoS and flickering
     if (bgChanged) {
@@ -68,6 +104,15 @@ void WatchFace::updateTime() {
 }
 
 void WatchFace::render() {
+    // Optimized: Frame-skipping logic. Only redraw if the second changed or a redraw is forced.
+    // This significantly reduces SPI bus traffic and power consumption.
+    if (ss == last_ss && !forceRedraw) {
+        delay(20); // Maintain a small delay to avoid pegging the CPU
+        return;
+    }
+    last_ss = ss;
+    forceRedraw = false;
+
     // In a real application, you might use Tft-eSPI Sprites to avoid flickering
     // For this example, we render directly to the screen.
 
@@ -87,8 +132,8 @@ void WatchFace::render() {
 }
 
 void WatchFace::drawGlow() {
-    // Draw a subtle outer ring to simulate glow
-    tft.drawCircle(120, 120, 110, tft.alphaBlend(128, config.accentColor1, config.bgColor));
+    // Optimized: Use pre-calculated glow color to avoid per-frame alphaBlend overhead
+    tft.drawCircle(120, 120, 110, cachedGlowColor);
 }
 
 void WatchFace::drawProgressRings() {
@@ -96,9 +141,8 @@ void WatchFace::drawProgressRings() {
     int centerY = 120;
 
     // Outer Ring (e.g., Steps)
-    // TFT_eSPI's drawSmoothArc is ideal for this if enabled in User_Setup.h
-    // Here we use a simpler approach for compatibility
-    tft.drawCircle(centerX, centerY, 100, tft.alphaBlend(32, 0xFFFF, config.bgColor));
+    // Optimized: Use pre-calculated ring background color
+    tft.drawCircle(centerX, centerY, 100, cachedRingBgColor);
 
     // Draw progress part (mocking 75% progress)
     // Use drawSmoothArc if available: tft.drawSmoothArc(centerX, centerY, 100, 90, 0, 270, config.accentColor1, config.bgColor);
@@ -106,7 +150,7 @@ void WatchFace::drawProgressRings() {
     tft.drawCircle(centerX, centerY, 101, config.accentColor1);
 
     // Inner Ring (e.g., Battery)
-    tft.drawCircle(centerX, centerY, 90, tft.alphaBlend(32, 0xFFFF, config.bgColor));
+    tft.drawCircle(centerX, centerY, 90, cachedRingBgColor);
     tft.drawCircle(centerX, centerY, 91, config.accentColor2);
 }
 
