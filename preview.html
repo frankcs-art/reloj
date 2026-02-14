@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
     <title>Vista Previa - Reloj Galáctico</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
@@ -305,6 +306,10 @@
             <input type="color" id="cfg-accent2" value="#00b875">
         </div>
         <div class="config-group">
+            <label for="cfg-text">Color de Texto</label>
+            <input type="color" id="cfg-text" value="#FFFFFF">
+        </div>
+        <div class="config-group">
             <label for="cfg-steps">
                 <input type="checkbox" id="cfg-steps" checked> Mostrar Pasos
             </label>
@@ -374,10 +379,13 @@
             bgColor: "#0F0C29",
             accentColor1: "#00D2FF",
             accentColor2: "#00b875",
+            textColor: "#FFFFFF",
             showSteps: true,
             showBPM: true,
             is24h: true
         };
+
+        const isValidHex = (hex) => /^#[0-9A-F]{6}$/i.test(hex);
 
         function updateUI() {
             const watch = document.getElementById('watch');
@@ -398,6 +406,10 @@
             stepsStat.querySelector('.stat-value').style.color = config.accentColor1;
 
             bpmStat.style.display = config.showBPM ? 'flex' : 'none';
+
+            const timeEl = document.getElementById('time');
+            timeEl.style.color = config.textColor;
+            timeEl.style.textShadow = `0 0 20px ${config.accentColor1}66`;
 
             document.documentElement.style.setProperty('--accent-blue', config.accentColor1);
             document.documentElement.style.setProperty('--accent-purple', config.accentColor2);
@@ -424,9 +436,10 @@
         }
 
         // Event Listeners
-        document.getElementById('cfg-bg').addEventListener('input', (e) => { config.bgColor = e.target.value; updateUI(); });
-        document.getElementById('cfg-accent1').addEventListener('input', (e) => { config.accentColor1 = e.target.value; updateUI(); });
-        document.getElementById('cfg-accent2').addEventListener('input', (e) => { config.accentColor2 = e.target.value; updateUI(); });
+        document.getElementById('cfg-bg').addEventListener('input', (e) => { if (isValidHex(e.target.value)) { config.bgColor = e.target.value; updateUI(); } });
+        document.getElementById('cfg-accent1').addEventListener('input', (e) => { if (isValidHex(e.target.value)) { config.accentColor1 = e.target.value; updateUI(); } });
+        document.getElementById('cfg-accent2').addEventListener('input', (e) => { if (isValidHex(e.target.value)) { config.accentColor2 = e.target.value; updateUI(); } });
+        document.getElementById('cfg-text').addEventListener('input', (e) => { if (isValidHex(e.target.value)) { config.textColor = e.target.value; updateUI(); } });
         document.getElementById('cfg-steps').addEventListener('change', (e) => { config.showSteps = e.target.checked; updateUI(); });
         document.getElementById('cfg-bpm').addEventListener('change', (e) => { config.showBPM = e.target.checked; updateUI(); });
         document.getElementById('cfg-format').addEventListener('change', (e) => { config.is24h = e.target.value === '24h'; updateUI(); });
