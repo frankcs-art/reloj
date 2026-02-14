@@ -9,3 +9,7 @@
 ## 2025-02-12 - Optimizing Mobile Preview Recomposition
 **Learning:** In the mobile module, a 1Hz clock update was causing the entire screen to recompose every second because the `currentTime` state was read directly for formatting. Moving expensive objects (Brush, List, DateTimeFormatter) to top-level constants and using `derivedStateOf` for the formatted time (HH:mm) reduced the recomposition frequency from 1Hz to 1/60Hz, a ~98% reduction in UI work.
 **Action:** Always check for direct state reads of high-frequency variables in root-level Composables. Move static object allocations out of the Composable scope.
+
+## 2025-02-14 - Arduino Rendering & Color Optimization
+**Learning:** In resource-constrained environments like Arduino, per-frame operations like `alphaBlend` and full-screen SPI redraws are major bottlenecks. Implementing frame-skipping by tracking state changes (e.g., `ss == last_ss`) and pre-calculating blended colors in a cache significantly reduces bus traffic and CPU load. A `forceRedraw` flag is essential to ensure that configuration changes are reflected immediately without waiting for the next state transition.
+**Action:** Use conditional rendering and color caching in high-frequency loops for embedded devices.
