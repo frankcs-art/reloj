@@ -52,10 +52,17 @@ private:
 
     // Time variables
     int hh, mm, ss;
+    int last_ss = -1;
+    bool forceRedraw = true;
     String dayStr;
     String dateStr;
 
+    // Cached colors for performance optimization
+    uint16_t cachedGlowColor;
+    uint16_t cachedRingBgColor;
+
     // Rendering sub-functions
+    void updateCachedColors();
     void drawGlow();
     void drawProgressRings();
     void drawTime();
